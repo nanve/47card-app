@@ -20,7 +20,7 @@
 </style>
 </head>
 <body>
-<h2>🔢 カード認識テスト（数字コード）</h2>
+<h2>🔢 カード認識テスト（最終調整）</h2>
 
 <video id="video" autoplay playsinline></video><br>
 <button id="startCamera">カメラ起動</button>
@@ -39,12 +39,11 @@ const startCameraButton = document.getElementById('startCamera');
 
 // カードデータ辞書
 const cardLinks = {
-  "001": "https://3bonya.com/47/2025/11/25/hello-world/" // 認識文字 "001" のみ
+  "001": "https://3bonya.com/47/2025/11/25/hello-world/"
 };
 
 // 1. カメラ起動（アウトカメラ優先設定を適用）
 startCameraButton.addEventListener('click', async () => {
-  // ... (カメラ起動ロジックは変更なし) ...
   resultDiv.innerHTML = "カメラを起動中...";
   try {
     const constraints = { video: { facingMode: "environment" } };
@@ -52,9 +51,8 @@ startCameraButton.addEventListener('click', async () => {
     if (video.srcObject) { video.srcObject.getTracks().forEach(track => track.stop()); }
     video.srcObject = stream;
     captureButton.disabled = false;
-    resultDiv.innerHTML = "カメラ起動成功。カードの**001**を撮影エリアに入れてください。";
+    resultDiv.innerHTML = "カメラ起動成功。カードの**001**を画面いっぱいに大きく写してください。";
   } catch (err) {
-    alert("カメラ起動エラー: " + err.message + "。カメラへのアクセスを許可しているか確認してください。");
     resultDiv.innerHTML = `<p style="color:red;">カメラ起動エラー: ${err.message}</p>`;
   }
 });
@@ -71,15 +69,15 @@ captureButton.addEventListener('click', async () => {
   canvas.height = video.videoHeight;
   ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
   
-  // --- 🚨 二値化処理を削除しました 🚨 ---
+  // ------------------------------------------------
   
   try {
-    // 2-1. OCR実行 (日本語 'jpn' と 数字ホワイトリストを設定)
-    const { data: { text } } = await Tesseract.recognize(canvas, 'jpn', {
+    // 🚨 最終調整: OCRモードを英語 ('eng') に変更し、数字のみに限定 🚨
+    const { data: { text } } = await Tesseract.recognize(canvas, 'eng', { 
       tessedit_char_whitelist: '0123456789' // 認識対象を数字のみに限定
     }); 
 
-    // 認識文字から空白文字、改行、および数字以外の文字をすべて除去 (念のため)
+    // 認識文字から空白文字、改行、および数字以外の文字をすべて除去
     const recognizedText = text.trim().replace(/\s/g, '').replace('\n', '').replace(/[^0-9]/g, '');
     console.log("認識文字:", recognizedText);
 
@@ -90,13 +88,14 @@ captureButton.addEventListener('click', async () => {
                             <a href="${cardLinks[recognizedText]}" target="_blank">✅ **${recognizedText}** カード情報を見る</a>`;
     } else {
       outputHTML = `<p>認識結果: **${recognizedText}**</p>
-                            <p style="color:orange;">該当カード **${recognizedText}** が辞書に見つかりません。</p>`;
+                            <p style="color:orange;">該当カード **${recognizedText}** が辞書に見つかりません。</p>
+                            <p>ヒント：文字が画面いっぱいに大きく、ピントが合っているか確認してください。</p>`;
     }
     
     resultDiv.innerHTML = outputHTML;
 
   } catch (ocrErr) {
-    resultDiv.innerHTML = `<p style="color:red;">認識処理エラー: Tesseract.jsの実行中に問題が発生しました。</p>`;
+    resultDiv.innerHTML = `<p style="color:red;">認識処理エラー: Tesseract.jsの実行中に問題が発生しました。インターネット接続を確認してください。</p>`;
     console.error(ocrErr);
   }
   
