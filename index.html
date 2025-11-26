@@ -2,22 +2,47 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>カメラ撮影テスト</title>
+<title>カメラ撮影テスト（アウトカメラ優先）</title>
 <style>
-  video, canvas { width: 300px; height: auto; display: block; margin-bottom: 10px; }
-  #photo { border: 1px solid #ccc; }
+  body { font-family: sans-serif; padding: 20px; }
+  h2, h3 { color: #333; }
+  /* プレビューと撮影画像のサイズ設定 */
+  video, #photo {
+    width: 100%; /* 親要素に合わせて幅を最大化 */
+    max-width: 400px;
+    height: auto;
+    display: block;
+    margin: 10px 0;
+    border: 1px solid #ccc;
+    background-color: #eee;
+  }
+  button {
+    padding: 10px 20px;
+    font-size: 16px;
+    margin-right: 10px;
+    cursor: pointer;
+  }
+  /* canvasは画面に表示しない（裏で処理用） */
+  #canvas { display: none; }
 </style>
 </head>
 <body>
 <h2>カメラ起動＆撮影テスト</h2>
-<h3>プレビュー</h3>
-<video id="video" autoplay playsinline></video><br>
+
 <button id="startCamera">カメラ起動</button>
 <button id="takePhoto" disabled>撮影</button>
 
+<hr>
+
+<h3>プレビュー</h3>
+<video id="video" autoplay playsinline></video>
+
+<hr>
+
 <h3>撮影結果</h3>
-<canvas id="canvas" style="display:none;"></canvas>
-<img id="photo" alt="撮影された画像">
+<img id="photo" alt="撮影された画像" src="">
+
+<canvas id="canvas"></canvas>
 
 <script>
 const video = document.getElementById('video');
@@ -26,32 +51,57 @@ const photo = document.getElementById('photo');
 const startCameraButton = document.getElementById('startCamera');
 const takePhotoButton = document.getElementById('takePhoto');
 
-// 1. カメラ起動
+// 1. カメラ起動 (アウトカメラを優先)
 startCameraButton.addEventListener('click', async () => {
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    // アウトカメラ（背面カメラ）を優先する設定
+    const constraints = {
+      video: {
+        // environment（背面）を優先し、利用できなければ他のカメラも許可
+        facingMode: "environment" 
+      }
+    };
+
+    const stream = await navigator.mediaDevices.getUserMedia(constraints);
+    
+    // 既に起動中のカメラがあればトラックを停止してから新しいストリームをセット
+    if (video.srcObject) {
+      video.srcObject.getTracks().forEach(track => track.stop());
+    }
+    
     video.srcObject = stream;
-    takePhotoButton.disabled = false; // 撮影ボタンを有効化
-    alert("カメラ起動成功");
+    takePhotoButton.disabled = false;
+    alert("カメラ起動成功 (アウトカメラ優先)");
+    
   } catch (err) {
-    alert("カメラ起動エラー: " + err.message);
+    // カメラが利用できない場合やアクセスが拒否された場合のエラー処理
+    alert("カメラ起動エラー: " + err.message + "。カメラへのアクセスを許可しているか確認してください。");
+    takePhotoButton.disabled = true;
   }
 });
 
 // 2. 撮影機能
 takePhotoButton.addEventListener('click', () => {
-  // canvasのサイズをvideo要素に合わせる
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
+  // video要素から実際の幅と高さを取得
+  const width = video.videoWidth;
+  const height = video.videoHeight;
  
-  // canvasにvideoの現在のフレームを描画
-  const context = canvas.getContext('2d');
-  context.drawImage(video, 0, 0, canvas.width, canvas.height);
- 
-  // canvasから画像データを取得し、<img>タグに設定
-  const dataURL = canvas.toDataURL('image/png');
-  photo.src = dataURL;
-  alert("撮影完了");
+  if (width && height) {
+    // canvasのサイズをvideo要素に合わせる
+    canvas.width = width;
+    canvas.height = height;
+   
+    // canvasにvideoの現在のフレームを描画
+    const context = canvas.getContext('2d');
+    context.drawImage(video, 0, 0, width, height);
+   
+    // canvasから画像データを取得し、<img>タグに設定
+    const dataURL = canvas.toDataURL('image/png');
+    photo.src = dataURL;
+    alert("撮影完了");
+  } else {
+    alert("撮影エラー: カメラがアクティブではありません。");
+  }
 });
 </script>
 </body>
