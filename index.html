@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>オラクルカード認識01</title>
+<title>オラクルカード認識（文字のみ）</title>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@2/dist/tesseract.min.js"></script>
 <style>
   body { font-family: sans-serif; text-align: center; margin: 20px; }
@@ -21,7 +21,7 @@
 </style>
 </head>
 <body>
-<h2>🃏 カード認識テスト</h2>
+<h2>📝 カード認識テスト（文字のみ）</h2>
 
 <video id="video" autoplay playsinline></video><br>
 <button id="startCamera">カメラ起動</button>
@@ -38,12 +38,12 @@ const resultDiv = document.getElementById('result');
 const captureButton = document.getElementById('capture');
 const startCameraButton = document.getElementById('startCamera');
 
-// カードデータ辞書
+// カードデータ辞書 - キーを認識文字のみに修正
 const cardLinks = {
-  "陽光赤": "https://3bonya.com/47/2025/11/25/hello-world/" // 認識文字+色名でキーを統一
+  "陽光": "https://3bonya.com/47/2025/11/25/hello-world/" // 認識文字 "陽光" のみ
 };
 
-// 2. カメラ起動（アウトカメラ優先設定を適用）
+// 1. カメラ起動（アウトカメラ優先設定を適用）
 startCameraButton.addEventListener('click', async () => {
   resultDiv.innerHTML = "カメラを起動中...";
   try {
@@ -68,14 +68,14 @@ startCameraButton.addEventListener('click', async () => {
   }
 });
 
-// 3. 撮影＆認識 (Tesseract.jsをawaitで実行)
+// 2. 撮影＆認識
 captureButton.addEventListener('click', async () => {
   if (!video.srcObject) {
     alert("先にカメラを起動してください。");
     return;
   }
   
-  resultDiv.innerHTML = "撮影して認識処理中...しばらくお待ちください。";
+  resultDiv.innerHTML = "撮影して文字認識処理中...しばらくお待ちください。";
   captureButton.disabled = true; // 処理中はボタンを無効化
   
   // 撮影処理
@@ -84,49 +84,22 @@ captureButton.addEventListener('click', async () => {
   ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
   try {
-    // 3-1. OCR実行
+    // 2-1. OCR実行
     const { data: { text } } = await Tesseract.recognize(canvas, 'jpn');
-    // 認識文字から空白文字をすべて除去
+    // 認識文字から空白文字をすべて除去し、辞書のキーとして使用
     const recognizedText = text.trim().replace(/\s/g, ''); 
     console.log("認識文字:", recognizedText);
 
-    // 3-2. 色認識（右上50x50ピクセル）
-    const imgData = ctx.getImageData(canvas.width - 50, 0, 50, 50);
-    let r = 0, g = 0, b = 0;
-    for (let i = 0; i < imgData.data.length; i += 4) {
-      r += imgData.data[i];
-      g += imgData.data[i + 1]; // 修正: g += ...
-      b += imgData.data[i + 2]; // 修正: b += ...
-    }
-    const pixelCount = imgData.data.length / 4;
-    r = Math.round(r / pixelCount);
-    g = Math.round(g / pixelCount);
-    b = Math.round(b / pixelCount);
-
-    // 3-3. 色判定（簡易ロジック）
-    let colorName = "不明";
-    if (r > g && r > b && r > 150) colorName = "赤"; // Rが優位で明るい
-    else if (g > r && g > b && g > 150) colorName = "緑"; // Gが優位で明るい
-    else if (b > r && b > g && b > 150) colorName = "青"; // Bが優位で明るい
-    else if (r > 100 && g > 50 && b < 50) colorName = "茶"; // 茶色判定（赤と緑が強く青が弱い）
-    else if (r > 200 && g > 200 && b > 200) colorName = "白"; // 白っぽい
-    else if (r < 50 && g < 50 && b < 50) colorName = "黒"; // 黒っぽい
-
-
-    console.log(`色判定: RGB(${r}, ${g}, ${b}) → ${colorName}`);
-
-    // 3-4. 結果の表示と辞書検索
-    const key = recognizedText + colorName; // 認識文字と色名を連結してキーを作成
-    
+    // 2-2. 結果の表示と辞書検索
     let outputHTML;
-    if (cardLinks[key]) {
+    if (cardLinks[recognizedText]) {
       // カードが見つかった場合
-      outputHTML = `<p>認識結果: **${recognizedText}** (${colorName})</p>
-                            <a href="${cardLinks[key]}" target="_blank">✅ **${recognizedText}** カード情報を見る</a>`;
+      outputHTML = `<p>認識結果: **${recognizedText}**</p>
+                            <a href="${cardLinks[recognizedText]}" target="_blank">✅ **${recognizedText}** カード情報を見る</a>`;
     } else {
       // カードが見つからなかった場合
-      outputHTML = `<p>認識結果: **${recognizedText}** (${colorName})</p>
-                            <p style="color:orange;">該当カード **${key}** が辞書に見つかりません。</p>`;
+      outputHTML = `<p>認識結果: **${recognizedText}**</p>
+                            <p style="color:orange;">該当カード **${recognizedText}** が辞書に見つかりません。</p>`;
     }
     
     resultDiv.innerHTML = outputHTML;
