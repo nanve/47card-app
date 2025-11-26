@@ -4,34 +4,44 @@
 <head>
 <meta charset="UTF-8">
 <title>オラクルカード認識</title>
-<script/cdn.jsdelivr.net/npm/tesseract.js@2/dist/tesseract.min.js</script>
+https://cdn.jsdelivr.net/npm/tesseract.js@2/dist/tesseract.min.js
 <style>
-  video, canvas { width: 300px; height: auto; }
+  body { font-family: sans-serif; text-align: center; margin: 20px; }
+  video, canvas { width: 300px; height: auto; margin-top: 10px; }
   #result { margin-top: 20px; font-size: 18px; }
 </style>
 </head>
 <body>
 <h2>カード認識テスト</h2>
-<video id="video" autoplay></video><br>
+
+<!-- カメラ表示 -->
+<video id="video" autoplay playsinline></video><br>
+<button id="startCamera">カメラ起動</button>
 <button id="capture">撮影して認識</button>
 <canvas id="canvas" style="display:none;"></canvas>
+
 <div id="result"></div>
 
 <script>
 const video = document.getElementById('video');
 const canvas = document.getElementById('canvas');
-const resultDiv = document.getElementById('result');
 const ctx = canvas.getContext('2d');
-
-// カメラ起動
-navigator.mediaDevices.getUserMedia({ video: true })
-  .then(stream => { video.srcObject = stream; })
-  .catch(err => console.error("カメラ起動失敗:", err));
+const resultDiv = document.getElementById('result');
 
 // カードデータ辞書
 const cardLinks = {
   "陽光_赤": "https://3bonya.com/47/2025/11/25/hello-world/"
 };
+
+// カメラ起動（ユーザー操作必須）
+document.getElementById('startCamera').addEventListener('click', async () => {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    video.srcObject = stream;
+  } catch (err) {
+    alert("カメラ起動エラー: " + err.message);
+  }
+});
 
 // 撮影＆認識
 document.getElementById('capture').addEventListener('click', async () => {
@@ -49,8 +59,7 @@ document.getElementById('capture').addEventListener('click', async () => {
   let r = 0, g = 0, b = 0;
   for (let i = 0; i < imgData.data.length; i += 4) {
     r += imgData.data[i];
-    g += imgData.data[i + 1];
-    b += imgData.data[i + 2];
+   .data[i + 2];
   }
   const pixelCount = imgData.data.length / 4;
   r = Math.round(r / pixelCount);
@@ -65,10 +74,7 @@ document.getElementById('capture').addEventListener('click', async () => {
 
   console.log(`色判定: RGB(${r},${g},${b}) → ${colorName}`);
 
-  // 辞書検索
-  const key = `${recognizedText}_${colorName}`;
-  if (cardLinks[key]) {
-    resultDiv.innerHTML = `<p>認識結果: ${recognizedText} (${colorName})</p>
+  = `<p>認識結果: ${recognizedText} (${colorName})</p>
                             ${cardLinks[key]}カード情報を見る</a>`;
   } else {
     resultDiv.innerHTML = `<p>認識結果: ${recognizedText} (${colorName})</p>
