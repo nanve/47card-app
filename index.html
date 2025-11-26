@@ -1,28 +1,57 @@
-
 <!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>カメラテスト</title>
+<title>カメラ撮影テスト</title>
 <style>
-  video { width: 300px; height: auto; }
+  video, canvas { width: 300px; height: auto; display: block; margin-bottom: 10px; }
+  #photo { border: 1px solid #ccc; }
 </style>
 </head>
 <body>
-<h2>カメラ起動テスト</h2>
+<h2>カメラ起動＆撮影テスト</h2>
+<h3>プレビュー</h3>
 <video id="video" autoplay playsinline></video><br>
 <button id="startCamera">カメラ起動</button>
+<button id="takePhoto" disabled>撮影</button>
+
+<h3>撮影結果</h3>
+<canvas id="canvas" style="display:none;"></canvas>
+<img id="photo" alt="撮影された画像">
 
 <script>
 const video = document.getElementById('video');
-document.getElementById('startCamera').addEventListener('click', async () => {
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-    video.srcObject = stream;
-    alert("カメラ起動成功");
-  } catch (err) {
-    alert("カメラ起動エラー: " + err.message);
-  }
+const canvas = document.getElementById('canvas');
+const photo = document.getElementById('photo');
+const startCameraButton = document.getElementById('startCamera');
+const takePhotoButton = document.getElementById('takePhoto');
+
+// 1. カメラ起動
+startCameraButton.addEventListener('click', async () => {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    video.srcObject = stream;
+    takePhotoButton.disabled = false; // 撮影ボタンを有効化
+    alert("カメラ起動成功");
+  } catch (err) {
+    alert("カメラ起動エラー: " + err.message);
+  }
+});
+
+// 2. 撮影機能
+takePhotoButton.addEventListener('click', () => {
+  // canvasのサイズをvideo要素に合わせる
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+ 
+  // canvasにvideoの現在のフレームを描画
+  const context = canvas.getContext('2d');
+  context.drawImage(video, 0, 0, canvas.width, canvas.height);
+ 
+  // canvasから画像データを取得し、<img>タグに設定
+  const dataURL = canvas.toDataURL('image/png');
+  photo.src = dataURL;
+  alert("撮影完了");
 });
 </script>
 </body>
