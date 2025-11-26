@@ -2,14 +2,14 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>オラクルカード認識（文字のみ）</title>
+<title>カード認識テスト（数字コード）</title>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@2/dist/tesseract.min.js"></script>
 <style>
   body { font-family: sans-serif; text-align: center; margin: 20px; }
   /* videoとresultは幅を調整 */
   video, #result { 
     width: 100%; 
-    max-width: 400px; /* 見やすい最大幅 */
+    max-width: 400px; 
     height: auto; 
     margin: 10px auto; 
     border: 1px solid #ccc;
@@ -21,7 +21,7 @@
 </style>
 </head>
 <body>
-<h2>📝 カード認識テスト（文字のみ）</h2>
+<h2>🔢 カード認識テスト（数字コード）</h2>
 
 <video id="video" autoplay playsinline></video><br>
 <button id="startCamera">カメラ起動</button>
@@ -38,9 +38,9 @@ const resultDiv = document.getElementById('result');
 const captureButton = document.getElementById('capture');
 const startCameraButton = document.getElementById('startCamera');
 
-// カードデータ辞書 - キーを認識文字のみに修正
+// カードデータ辞書 - キーを認識文字 "001" のみに修正
 const cardLinks = {
-  "001": "https://3bonya.com/47/2025/11/25/hello-world/" // 認識文字 "陽光" のみ
+  "001": "https://3bonya.com/47/2025/11/25/hello-world/" // 認識文字 "001" のみ
 };
 
 // 1. カメラ起動（アウトカメラ優先設定を適用）
@@ -55,13 +55,12 @@ startCameraButton.addEventListener('click', async () => {
     };
     
     const stream = await navigator.mediaDevices.getUserMedia(constraints);
-    // 既に起動中のカメラがあればトラックを停止してから新しいストリームをセット
     if (video.srcObject) {
       video.srcObject.getTracks().forEach(track => track.stop());
     }
     video.srcObject = stream;
     captureButton.disabled = false; // 起動したら撮影ボタンを有効化
-    resultDiv.innerHTML = "カメラ起動成功。カードを撮影エリアに入れてください。";
+    resultDiv.innerHTML = "カメラ起動成功。カードの**001**を撮影エリアに入れてください。";
   } catch (err) {
     alert("カメラ起動エラー: " + err.message + "。カメラへのアクセスを許可しているか確認してください。");
     resultDiv.innerHTML = `<p style="color:red;">カメラ起動エラー: ${err.message}</p>`;
@@ -76,18 +75,41 @@ captureButton.addEventListener('click', async () => {
   }
   
   resultDiv.innerHTML = "撮影して文字認識処理中...しばらくお待ちください。";
-  captureButton.disabled = true; // 処理中はボタンを無効化
+  captureButton.disabled = true; 
   
   // 撮影処理
   canvas.width = video.videoWidth;
   canvas.height = video.videoHeight;
   ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
+  // --- 🚨 二値化処理（認識精度向上用） 🚨 ---
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const data = imageData.data;
+  const threshold = 128; // 閾値（0-255）。
+
+  for (let i = 0; i < data.length; i += 4) {
+    const brightness = (data[i] + data[i + 1] + data[i + 2]) / 3;
+    
+    let color;
+    if (brightness < threshold) {
+      color = 0; // 黒
+    } else {
+      color = 255; // 白
+    }
+    
+    data[i] = color;
+    data[i + 1] = color;
+    data[i + 2] = color;
+  }
+  
+  ctx.putImageData(imageData, 0, 0); // 処理した画像をCanvasに戻す
+  // ------------------------------------
+
   try {
     // 2-1. OCR実行
-    const { data: { text } } = await Tesseract.recognize(canvas, 'jpn');
-    // 認識文字から空白文字をすべて除去し、辞書のキーとして使用
-    const recognizedText = text.trim().replace(/\s/g, ''); 
+    const { data: { text } } = await Tesseract.recognize(canvas, 'jpn'); 
+    // 認識文字から空白文字と改行をすべて除去
+    const recognizedText = text.trim().replace(/\s/g, '').replace('\n', '');
     console.log("認識文字:", recognizedText);
 
     // 2-2. 結果の表示と辞書検索
@@ -109,7 +131,7 @@ captureButton.addEventListener('click', async () => {
     console.error(ocrErr);
   }
   
-  captureButton.disabled = false; // 処理完了後にボタンを再度有効化
+  captureButton.disabled = false;
 });
 </script>
 </body>
