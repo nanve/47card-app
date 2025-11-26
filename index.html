@@ -3,82 +3,25 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>オラクルカード認識</title>
-https://cdn.jsdelivr.net/npm/tesseract.js@2/dist/tesseract.min.js
+<title>カメラテスト</title>
 <style>
-  body { font-family: sans-serif; text-align: center; margin: 20px; }
-  video, canvas { width: 300px; height: auto; margin-top: 10px; }
-  #result { margin-top: 20px; font-size: 18px; }
+  video { width: 300px; height: auto; }
 </style>
 </head>
 <body>
-<h2>カード認識テスト</h2>
-
-<!-- カメラ表示 -->
+<h2>カメラ起動テスト</h2>
 <video id="video" autoplay playsinline></video><br>
 <button id="startCamera">カメラ起動</button>
-<button id="capture">撮影して認識</button>
-<canvas id="canvas" style="display:none;"></canvas>
-
-<div id="result"></div>
 
 <script>
 const video = document.getElementById('video');
-const canvas = document.getElementById('canvas');
-const ctx = canvas.getContext('2d');
-const resultDiv = document.getElementById('result');
-
-// カードデータ辞書
-const cardLinks = {
-  "陽光_赤": "https://3bonya.com/47/2025/11/25/hello-world/"
-};
-
-// カメラ起動（ユーザー操作必須）
 document.getElementById('startCamera').addEventListener('click', async () => {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ video: true });
     video.srcObject = stream;
+    alert("カメラ起動成功");
   } catch (err) {
     alert("カメラ起動エラー: " + err.message);
-  }
-});
-
-// 撮影＆認識
-document.getElementById('capture').addEventListener('click', async () => {
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-  // OCR実行
-  const { data: { text } } = await Tesseract.recognize(canvas, 'jpn');
-  const recognizedText = text.trim().replace(/\s/g, '');
-  console.log("認識文字:", recognizedText);
-
-  // 色認識（右上50x50ピクセル）
-  const imgData = ctx.getImageData(canvas.width - 50, 0, 50, 50);
-  let r = 0, g = 0, b = 0;
-  for (let i = 0; i < imgData.data.length; i += 4) {
-    r += imgData.data[i];
-   .data[i + 2];
-  }
-  const pixelCount = imgData.data.length / 4;
-  r = Math.round(r / pixelCount);
-  g = Math.round(g / pixelCount);
-  b = Math.round(b / pixelCount);
-
-  // 色判定（簡易）
-  let colorName = "不明";
-  if (r > g && r > b) colorName = "赤";
-  else if (r > 100 && g > 50 && b < 50) colorName = "茶";
-  else if (g > r && g > b) colorName = "緑";
-
-  console.log(`色判定: RGB(${r},${g},${b}) → ${colorName}`);
-
-  = `<p>認識結果: ${recognizedText} (${colorName})</p>
-                            ${cardLinks[key]}カード情報を見る</a>`;
-  } else {
-    resultDiv.innerHTML = `<p>認識結果: ${recognizedText} (${colorName})</p>
-                            <p>該当カードが見つかりません。</p>`;
   }
 });
 </script>
