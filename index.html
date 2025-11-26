@@ -6,7 +6,6 @@
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@2/dist/tesseract.min.js"></script>
 <style>
   body { font-family: sans-serif; text-align: center; margin: 20px; }
-  /* videoとresultは幅を調整 */
   video, #result { 
     width: 100%; 
     max-width: 400px; 
@@ -38,28 +37,21 @@ const resultDiv = document.getElementById('result');
 const captureButton = document.getElementById('capture');
 const startCameraButton = document.getElementById('startCamera');
 
-// カードデータ辞書 - キーを認識文字 "001" のみに修正
+// カードデータ辞書
 const cardLinks = {
   "001": "https://3bonya.com/47/2025/11/25/hello-world/" // 認識文字 "001" のみ
 };
 
 // 1. カメラ起動（アウトカメラ優先設定を適用）
 startCameraButton.addEventListener('click', async () => {
+  // ... (カメラ起動ロジックは変更なし) ...
   resultDiv.innerHTML = "カメラを起動中...";
   try {
-    // アウトカメラ（背面カメラ）を優先する設定
-    const constraints = {
-      video: {
-        facingMode: "environment" 
-      }
-    };
-    
+    const constraints = { video: { facingMode: "environment" } };
     const stream = await navigator.mediaDevices.getUserMedia(constraints);
-    if (video.srcObject) {
-      video.srcObject.getTracks().forEach(track => track.stop());
-    }
+    if (video.srcObject) { video.srcObject.getTracks().forEach(track => track.stop()); }
     video.srcObject = stream;
-    captureButton.disabled = false; // 起動したら撮影ボタンを有効化
+    captureButton.disabled = false;
     resultDiv.innerHTML = "カメラ起動成功。カードの**001**を撮影エリアに入れてください。";
   } catch (err) {
     alert("カメラ起動エラー: " + err.message + "。カメラへのアクセスを許可しているか確認してください。");
@@ -69,10 +61,7 @@ startCameraButton.addEventListener('click', async () => {
 
 // 2. 撮影＆認識
 captureButton.addEventListener('click', async () => {
-  if (!video.srcObject) {
-    alert("先にカメラを起動してください。");
-    return;
-  }
+  if (!video.srcObject) { alert("先にカメラを起動してください。"); return; }
   
   resultDiv.innerHTML = "撮影して文字認識処理中...しばらくお待ちください。";
   captureButton.disabled = true; 
@@ -81,45 +70,25 @@ captureButton.addEventListener('click', async () => {
   canvas.width = video.videoWidth;
   canvas.height = video.videoHeight;
   ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-  // --- 🚨 二値化処理（認識精度向上用） 🚨 ---
-  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  const data = imageData.data;
-  const threshold = 128; // 閾値（0-255）。
-
-  for (let i = 0; i < data.length; i += 4) {
-    const brightness = (data[i] + data[i + 1] + data[i + 2]) / 3;
-    
-    let color;
-    if (brightness < threshold) {
-      color = 0; // 黒
-    } else {
-      color = 255; // 白
-    }
-    
-    data[i] = color;
-    data[i + 1] = color;
-    data[i + 2] = color;
-  }
   
-  ctx.putImageData(imageData, 0, 0); // 処理した画像をCanvasに戻す
-  // ------------------------------------
-
+  // --- 🚨 二値化処理を削除しました 🚨 ---
+  
   try {
-    // 2-1. OCR実行
-    const { data: { text } } = await Tesseract.recognize(canvas, 'jpn'); 
-    // 認識文字から空白文字と改行をすべて除去
-    const recognizedText = text.trim().replace(/\s/g, '').replace('\n', '');
+    // 2-1. OCR実行 (日本語 'jpn' と 数字ホワイトリストを設定)
+    const { data: { text } } = await Tesseract.recognize(canvas, 'jpn', {
+      tessedit_char_whitelist: '0123456789' // 認識対象を数字のみに限定
+    }); 
+
+    // 認識文字から空白文字、改行、および数字以外の文字をすべて除去 (念のため)
+    const recognizedText = text.trim().replace(/\s/g, '').replace('\n', '').replace(/[^0-9]/g, '');
     console.log("認識文字:", recognizedText);
 
     // 2-2. 結果の表示と辞書検索
     let outputHTML;
     if (cardLinks[recognizedText]) {
-      // カードが見つかった場合
       outputHTML = `<p>認識結果: **${recognizedText}**</p>
                             <a href="${cardLinks[recognizedText]}" target="_blank">✅ **${recognizedText}** カード情報を見る</a>`;
     } else {
-      // カードが見つからなかった場合
       outputHTML = `<p>認識結果: **${recognizedText}**</p>
                             <p style="color:orange;">該当カード **${recognizedText}** が辞書に見つかりません。</p>`;
     }
